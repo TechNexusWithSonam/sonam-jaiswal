@@ -1,0 +1,320 @@
+/*
+ * Saturn-style technology orbit around the hero portrait.
+ *
+ * Depth layering: every ring is rendered in a BACK layer (painted before the figure) and a
+ * FRONT layer (painted after it). Both copies share identical geometry and animation timing,
+ * and each is clipped along the ring's major axis — the back copy keeps the far half, the
+ * front copy keeps the near half. Their union is always the complete ring, so pills crossing
+ * the clip line never jump or disappear; they simply pass from behind the figure to in front.
+ *
+ * Readability: pills sit at fixed slots on the spinning plane. Each pill counter-rotates by
+ * the same angle on the same clock, then undoes the plane's rotateX and the ring's on-screen
+ * tilt, so its label is always upright and facing the viewer.
+ *
+ * Only `transform` and `opacity` are animated (GPU-composited).
+ */
+
+/* ── Layers ─────────────────────────────────────────────────────────────────── */
+.layer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -35%;
+  width: 170%;
+  pointer-events: none;
+  opacity: 0;
+  animation: layerIn 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
+}
+
+/* Near halves of the ring LINES are softened over the figure so the portrait stays clear */
+.frontLines {
+  -webkit-mask-image: radial-gradient(ellipse 16% 22% at 50% 64%, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.5) 55%, #000 100%);
+  mask-image: radial-gradient(ellipse 16% 22% at 50% 64%, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.5) 55%, #000 100%);
+}
+
+/* ── Ring geometry ──────────────────────────────────────────────────────────── */
+/* 2D tilt of the whole ring on screen; the clip line follows its major axis */
+.ringTilt {
+  position: absolute;
+  left: 50%;
+  top: var(--cy);
+  width: var(--size);
+  aspect-ratio: 1 / 1;
+  transform: translate3d(-50%, -50%, 0) rotate(var(--tilt));
+}
+
+.ringClip {
+  position: absolute;
+  inset: 0;
+  perspective: 1800px;
+}
+
+/* rotateX(+) pushes the top edge away from the viewer: top half = far side */
+.back .ringClip {
+  clip-path: polygon(-80% -80%, 180% -80%, 180% 50%, -80% 50%);
+}
+.front .ringClip {
+  clip-path: polygon(-80% 50%, 180% 50%, 180% 180%, -80% 180%);
+}
+
+.ringPlane {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx));
+}
+
+.ringSpin {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  transform-style: preserve-3d;
+  will-change: transform;
+  animation: spin var(--dur) linear infinite;
+  animation-direction: var(--dir);
+  animation-delay: var(--delay);
+}
+
+/* Thin base edge */
+.ringLine {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--rgb) / 0.3);
+  box-shadow:
+    0 0 14px rgb(var(--rgb) / 0.18),
+    inset 0 0 14px rgb(var(--rgb) / 0.12);
+}
+
+/* Bright travelling arc — makes the rotation visible */
+.ringComet {
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgb(var(--rgb) / 0) 220deg,
+    rgb(var(--rgb) / 0.45) 310deg,
+    rgb(var(--rgb) / 0.95) 354deg,
+    transparent 360deg
+  );
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  filter: drop-shadow(0 0 5px rgb(var(--rgb) / 0.7));
+}
+
+/* ── Technology pills ───────────────────────────────────────────────────────── */
+/* Fixed slot on the ring (left/top set inline); rides the spinning plane */
+.slot {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+/* Billboard: undo the spin (animated, same clock), the plane tilt and the screen tilt */
+.counter {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+  transform: rotateZ(0deg) rotateX(calc(-1 * var(--rx))) rotateZ(calc(-1 * var(--tilt)));
+  animation: counterSpin var(--dur) linear infinite;
+  animation-direction: var(--dir);
+  animation-delay: var(--delay);
+}
+
+.pill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: default;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-display), 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: #e2e8f0;
+  background: linear-gradient(135deg, rgb(var(--rgb) / 0.16), rgba(5, 8, 22, 0.72) 60%);
+  border: 1px solid rgb(var(--rgb) / 0.35);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 10px rgb(var(--rgb) / 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+
+.pill:hover {
+  color: #ffffff;
+  border-color: rgb(var(--rgb) / 0.85);
+  background: linear-gradient(135deg, rgb(var(--rgb) / 0.32), rgba(5, 8, 22, 0.82) 70%);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 16px rgb(var(--rgb) / 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* ── Tiny orbital rings ─────────────────────────────────────────────────────── */
+.tiny {
+  position: absolute;
+  width: var(--s);
+  height: var(--s);
+  perspective: 400px;
+  will-change: transform;
+  animation: float var(--float, 7s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.tinyCore {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: rgb(var(--rgb));
+  box-shadow: 0 0 10px rgb(var(--rgb) / 0.9);
+}
+
+.tinyRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--rgb) / 0.55);
+  box-shadow: 0 0 10px rgb(var(--rgb) / 0.35);
+  transform-style: preserve-3d;
+  will-change: transform;
+  animation: tumble var(--dur, 9s) linear infinite;
+  animation-direction: var(--dir, normal);
+}
+
+.tinyRing::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  margin-left: -1.5px;
+  border-radius: 50%;
+  background: rgb(var(--rgb));
+  box-shadow: 0 0 6px rgb(var(--rgb));
+}
+
+/* ── Free particles ─────────────────────────────────────────────────────────── */
+.particle {
+  position: absolute;
+  width: var(--s, 3px);
+  height: var(--s, 3px);
+  border-radius: 50%;
+  background: rgb(var(--rgb));
+  box-shadow: 0 0 8px rgb(var(--rgb) / 0.8);
+  will-change: transform, opacity;
+  animation: drift var(--dur, 8s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 639px) {
+  .ringTilt {
+    width: calc(var(--size) * 0.86);
+  }
+  .pill {
+    padding: 3px 8px;
+    font-size: 9px;
+  }
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────────────── */
+@keyframes layerIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotateZ(0deg);
+  }
+  to {
+    transform: rotateZ(360deg);
+  }
+}
+
+@keyframes counterSpin {
+  from {
+    transform: rotateZ(0deg) rotateX(calc(-1 * var(--rx))) rotateZ(calc(-1 * var(--tilt)));
+  }
+  to {
+    transform: rotateZ(-360deg) rotateX(calc(-1 * var(--rx))) rotateZ(calc(-1 * var(--tilt)));
+  }
+}
+
+@keyframes tumble {
+  from {
+    transform: rotateX(68deg) rotateY(var(--ry, -18deg)) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(68deg) rotateY(var(--ry, -18deg)) rotateZ(360deg);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -12px, 0);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate3d(var(--dx, 6px), var(--dy, -14px), 0);
+    opacity: 0.95;
+  }
+}
+
+/*
+ * Reduced motion: the slow, linear ring rotation is the core of the design and always runs.
+ * With Windows "Animation effects" off, browsers report `reduce`, and the global rule in
+ * globals.css (`* { animation-duration: 0.001ms !important; animation-iteration-count: 1
+ * !important }`) froze the orbit at its end frame. These class selectors out-rank `*`, so
+ * their !important restores the real timing for the orbit only. Entrance fade and the
+ * decorative float/drift are still dropped.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .ringSpin,
+  .counter,
+  .tinyRing {
+    animation-duration: var(--dur, 9s) !important;
+    animation-iteration-count: infinite !important;
+  }
+  .layer {
+    animation: none;
+    opacity: 1;
+  }
+  .tiny,
+  .particle {
+    animation: none;
+  }
+}
