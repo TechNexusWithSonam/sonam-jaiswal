@@ -2,14 +2,13 @@
 
 import { useState, useRef, FormEvent } from 'react'
 import { motion } from 'framer-motion'
-import { Mail, Send, Phone, MapPin, CheckCircle, Circle } from 'lucide-react'
+import { Mail, Send, MapPin, CheckCircle, Circle } from 'lucide-react'
 import GlassCard from '@/components/ui/GlassCard'
 import { CTAButton } from '@/components/ui/CTAButton'
 import { profile } from '@/data/profile'
 
 const contactItems = [
   { icon: Mail, label: 'Email', value: profile.email, href: `mailto:${profile.email}` },
-  { icon: Phone, label: 'Phone', value: profile.phone, href: profile.phoneHref },
   { icon: MapPin, label: 'Location', value: profile.location },
 ]
 

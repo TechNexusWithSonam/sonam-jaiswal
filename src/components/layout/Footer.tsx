@@ -1,12 +1,11 @@
 'use client'
 
-import { Mail, Phone } from 'lucide-react'
+import { Mail } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { profile } from '@/data/profile'
 
 const socials = [
   { icon: Mail, label: 'Email', value: profile.email, href: `mailto:${profile.email}` },
-  { icon: Phone, label: 'Phone', value: profile.phone, href: profile.phoneHref },
 ]
 
 export default function Footer() {

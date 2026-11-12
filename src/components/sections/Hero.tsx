@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useRef } from 'react'
 import { MotionConfig, motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
-import { ArrowUpRight, ArrowDown, Download, Mail, Phone, MapPin } from 'lucide-react'
+import { ArrowUpRight, ArrowDown, Download, Mail, MapPin } from 'lucide-react'
 import { profile } from '@/data/profile'
 import { CTAButton, CTALink } from '@/components/ui/CTAButton'
 import OrbitalRings from './OrbitalRings'
@@ -24,7 +24,6 @@ export type HeroPortrait = {
 
 const socials = [
   { icon: Mail, label: 'Email', value: profile.email, href: `mailto:${profile.email}` },
-  { icon: Phone, label: 'Phone', value: profile.phone, href: profile.phoneHref },
 ]
 
 const techs = ['React.js', 'Node.js', 'WebRTC', 'Socket.IO', 'PostgreSQL', 'AWS']
